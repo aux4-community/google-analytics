@@ -1,0 +1,161 @@
+{
+  "scope": "community",
+  "name": "google-analytics",
+  "version": "1.0.0",
+  "description": "Commands to interact with Google Analytics (GA4) using the Analytics Data API",
+  "license": "MIT",
+  "tags": [
+    "google",
+    "analytics",
+    "ga4",
+    "google-analytics",
+    "reporting",
+    "cli"
+  ],
+  "dependencies": [
+    "community/google-auth"
+  ],
+  "system": [
+    [
+      "test:gws --version",
+      "brew:googleworkspace-cli",
+      "npm:@googleworkspace/cli"
+    ],
+    [
+      "test:jq --version",
+      "brew:jq",
+      "linux:jq"
+    ]
+  ],
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "google",
+          "execute": [
+            "profile:google"
+          ],
+          "help": {
+            "text": "Google commands"
+          }
+        }
+      ]
+    },
+    {
+      "name": "google",
+      "commands": [
+        {
+          "name": "analytics",
+          "execute": [
+            "profile:google:analytics"
+          ],
+          "help": {
+            "text": "Google Analytics (GA4) commands"
+          }
+        }
+      ]
+    },
+    {
+      "name": "google:analytics",
+      "commands": [
+        {
+          "name": "services",
+          "private": true,
+          "execute": [
+            "echo '{\"name\":\"analytics\",\"scope\":\"https://www.googleapis.com/auth/analytics.readonly\",\"description\":\"Access Google Analytics data (GA4)\"}'"
+          ],
+          "help": {
+            "text": "Output service metadata for auth resolution"
+          }
+        },
+        {
+          "name": "report",
+          "execute": [
+            "${packageDir}/lib/run-report.sh values(propertyId, startDate, endDate, dimensions, metrics, limit)"
+          ],
+          "help": {
+            "text": "Run a standard GA4 report",
+            "variables": [
+              {
+                "name": "propertyId",
+                "text": "GA4 property ID (numeric, e.g. 123456789)",
+                "arg": true
+              },
+              {
+                "name": "startDate",
+                "text": "Start date (YYYY-MM-DD or relative: yesterday, 7daysAgo, 30daysAgo)"
+              },
+              {
+                "name": "endDate",
+                "text": "End date (YYYY-MM-DD or relative: today, yesterday)"
+              },
+              {
+                "name": "dimensions",
+                "text": "Comma-separated dimensions (e.g. date,country,pagePath)",
+                "default": "date"
+              },
+              {
+                "name": "metrics",
+                "text": "Comma-separated metrics (e.g. sessions,activeUsers,screenPageViews)",
+                "default": "sessions,activeUsers"
+              },
+              {
+                "name": "limit",
+                "text": "Maximum number of rows to return",
+                "default": "10000"
+              }
+            ]
+          }
+        },
+        {
+          "name": "realtime",
+          "execute": [
+            "${packageDir}/lib/run-realtime.sh values(propertyId, metrics, dimensions, limit)"
+          ],
+          "help": {
+            "text": "Run a realtime report for the last 30 minutes",
+            "variables": [
+              {
+                "name": "propertyId",
+                "text": "GA4 property ID (numeric, e.g. 123456789)",
+                "arg": true
+              },
+              {
+                "name": "metrics",
+                "text": "Comma-separated metrics (e.g. activeUsers,screenPageViews)",
+                "default": "activeUsers"
+              },
+              {
+                "name": "dimensions",
+                "text": "Comma-separated dimensions (e.g. country,unifiedScreenName)",
+                "default": ""
+              },
+              {
+                "name": "limit",
+                "text": "Maximum number of rows to return",
+                "default": "100"
+              }
+            ]
+          }
+        },
+        {
+          "name": "metadata",
+          "execute": [
+            "${packageDir}/lib/gapi.sh GET 'https://analyticsdata.googleapis.com/v1beta/properties/'value(propertyId)'/metadata'"
+          ],
+          "help": {
+            "text": "List available dimensions and metrics for a property",
+            "variables": [
+              {
+                "name": "propertyId",
+                "text": "GA4 property ID (numeric, e.g. 123456789)",
+                "arg": true
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
