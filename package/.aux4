@@ -1,7 +1,7 @@
 {
   "scope": "community",
   "name": "google-analytics",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Commands to interact with Google Analytics (GA4) using the Analytics Data API",
   "license": "MIT",
   "tags": [
@@ -13,14 +13,10 @@
     "cli"
   ],
   "dependencies": [
-    "community/google-auth"
+    "community/google-auth",
+    "aux4/curl"
   ],
   "system": [
-    [
-      "test:gws --version",
-      "brew:googleworkspace-cli",
-      "npm:@googleworkspace/cli"
-    ],
     [
       "test:jq --version",
       "brew:jq",
@@ -63,7 +59,7 @@
           "name": "services",
           "private": true,
           "execute": [
-            "echo '{\"name\":\"analytics\",\"scope\":\"https://www.googleapis.com/auth/analytics.readonly\",\"description\":\"Access Google Analytics data (GA4)\"}'"
+            "echo '{\"name\":\"analytics\",\"scope\":\"https://www.googleapis.com/auth/analytics.readonly\",\"readonlyScope\":\"https://www.googleapis.com/auth/analytics.readonly\",\"description\":\"Access Google Analytics data (GA4)\"}'"
           ],
           "help": {
             "text": "Output service metadata for auth resolution"
@@ -72,7 +68,11 @@
         {
           "name": "report",
           "execute": [
-            "${packageDir}/lib/run-report.sh values(propertyId, startDate, endDate, dimensions, metrics, limit)"
+            "set:dateRangeList=!START=value(startDate) END=value(endDate) jq -cn '[{startDate: env.START, endDate: env.END}]'",
+            "set:dimensionList=!DIMENSIONS=value(dimensions) jq -cn 'env.DIMENSIONS | split(\",\") | map(select(. != \"\") | {name: .})'",
+            "set:metricList=!METRICS=value(metrics) jq -cn 'env.METRICS | split(\",\") | map(select(. != \"\") | {name: .})'",
+            "set:requestUrl=${apiUrl}/v1beta/properties/${propertyId}:runReport",
+            "aux4 curl auth-request --provider google --tokenFile param(tokenFile) --method POST --header 'Content-Type: application/json' --url value(requestUrl) --body 'object(dateRangeList:dateRanges, dimensionList:dimensions, metricList:metrics, limit)'"
           ],
           "help": {
             "text": "Run a standard GA4 report",
@@ -103,7 +103,42 @@
               {
                 "name": "limit",
                 "text": "Maximum number of rows to return",
-                "default": "10000"
+                "default": "10000",
+                "type": "number"
+              },
+              {
+                "name": "dateRangeList",
+                "text": "Date ranges as a JSON array, derived from --startDate and --endDate",
+                "default": "",
+                "type": "json",
+                "private": true
+              },
+              {
+                "name": "dimensionList",
+                "text": "Dimensions as a JSON array, derived from --dimensions",
+                "default": "",
+                "type": "json",
+                "private": true
+              },
+              {
+                "name": "metricList",
+                "text": "Metrics as a JSON array, derived from --metrics",
+                "default": "",
+                "type": "json",
+                "private": true
+              },
+              {
+                "name": "tokenFile",
+                "text": "Where the Google OAuth token is stored",
+                "default": "${aux4HomeDir}/.oauth/google.json",
+                "env": "AUX4_GOOGLE_TOKEN_FILE"
+              },
+              {
+                "name": "apiUrl",
+                "text": "Analytics Data API base URL",
+                "default": "https://analyticsdata.googleapis.com",
+                "env": "GOOGLE_ANALYTICS_API_URL",
+                "private": true
               }
             ]
           }
@@ -111,7 +146,10 @@
         {
           "name": "realtime",
           "execute": [
-            "${packageDir}/lib/run-realtime.sh values(propertyId, metrics, dimensions, limit)"
+            "set:dimensionList=!DIMENSIONS=value(dimensions) jq -rn 'env.DIMENSIONS | split(\",\") | map(select(. != \"\") | {name: .}) | if length == 0 then \"\" else tojson end'",
+            "set:metricList=!METRICS=value(metrics) jq -cn 'env.METRICS | split(\",\") | map(select(. != \"\") | {name: .})'",
+            "set:requestUrl=${apiUrl}/v1beta/properties/${propertyId}:runRealtimeReport",
+            "aux4 curl auth-request --provider google --tokenFile param(tokenFile) --method POST --header 'Content-Type: application/json' --url value(requestUrl) --body 'object(metricList:metrics, dimensionList:dimensions, limit)'"
           ],
           "help": {
             "text": "Run a realtime report for the last 30 minutes",
@@ -134,7 +172,35 @@
               {
                 "name": "limit",
                 "text": "Maximum number of rows to return",
-                "default": "100"
+                "default": "100",
+                "type": "number"
+              },
+              {
+                "name": "dimensionList",
+                "text": "Dimensions as a JSON array, derived from --dimensions",
+                "default": "",
+                "type": "json",
+                "private": true
+              },
+              {
+                "name": "metricList",
+                "text": "Metrics as a JSON array, derived from --metrics",
+                "default": "",
+                "type": "json",
+                "private": true
+              },
+              {
+                "name": "tokenFile",
+                "text": "Where the Google OAuth token is stored",
+                "default": "${aux4HomeDir}/.oauth/google.json",
+                "env": "AUX4_GOOGLE_TOKEN_FILE"
+              },
+              {
+                "name": "apiUrl",
+                "text": "Analytics Data API base URL",
+                "default": "https://analyticsdata.googleapis.com",
+                "env": "GOOGLE_ANALYTICS_API_URL",
+                "private": true
               }
             ]
           }
@@ -142,7 +208,8 @@
         {
           "name": "metadata",
           "execute": [
-            "${packageDir}/lib/gapi.sh GET 'https://analyticsdata.googleapis.com/v1beta/properties/'value(propertyId)'/metadata'"
+            "set:requestUrl=${apiUrl}/v1beta/properties/${propertyId}/metadata",
+            "aux4 curl auth-request --provider google --tokenFile param(tokenFile) --url value(requestUrl)"
           ],
           "help": {
             "text": "List available dimensions and metrics for a property",
@@ -151,6 +218,19 @@
                 "name": "propertyId",
                 "text": "GA4 property ID (numeric, e.g. 123456789)",
                 "arg": true
+              },
+              {
+                "name": "tokenFile",
+                "text": "Where the Google OAuth token is stored",
+                "default": "${aux4HomeDir}/.oauth/google.json",
+                "env": "AUX4_GOOGLE_TOKEN_FILE"
+              },
+              {
+                "name": "apiUrl",
+                "text": "Analytics Data API base URL",
+                "default": "https://analyticsdata.googleapis.com",
+                "env": "GOOGLE_ANALYTICS_API_URL",
+                "private": true
               }
             ]
           }

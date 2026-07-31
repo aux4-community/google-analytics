@@ -1,7 +1,8 @@
-# google analytics metadata
+# google analytics realtime
 
 Part of the `core` group in `test.suite.md`. The Analytics Data API is replaced by a
-local echo server so the GET request can be asserted without a real GA4 property.
+local echo server so the realtime request body can be asserted without a real GA4
+property.
 
 ## against a local mock API
 
@@ -32,13 +33,13 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
-HTTPServer(('127.0.0.1', 18957), Handler).serve_forever()
+HTTPServer(('127.0.0.1', 18956), Handler).serve_forever()
 " >/dev/null 2>&1 &
 sleep 3
 ```
 
 ```afterAll
-pkill -f "18957" 2>/dev/null
+pkill -f "18956" 2>/dev/null
 ```
 
 ```file:google-token.json
@@ -54,42 +55,58 @@ pkill -f "18957" 2>/dev/null
 }
 ```
 
-### should GET the property metadata resource with a bearer token
+### should POST to the runRealtimeReport endpoint
 
 ```execute
-aux4 google analytics metadata 123456789 --tokenFile google-token.json --apiUrl http://127.0.0.1:18957
+aux4 google analytics realtime 123456789 --tokenFile google-token.json --apiUrl http://127.0.0.1:18956
 ```
 
 ```expect:partial
-"method": "GET"
+"method": "POST"
 ```
 
 ```expect:partial
-"path": "/v1beta/properties/123456789/metadata"
+"path": "/v1beta/properties/123456789:runRealtimeReport"
 ```
 
-```expect:partial
-"authorization": "Bearer test-access-token"
-```
-
-### should send no request body
+### should omit dimensions when none are given
 
 ```execute
-aux4 google analytics metadata 123456789 --tokenFile google-token.json --apiUrl http://127.0.0.1:18957 | aux4 json get --path '$.body'
+aux4 google analytics realtime 123456789 --tokenFile google-token.json --apiUrl http://127.0.0.1:18956 | aux4 json get --path '$.body'
 ```
 
-```expect
-null
+```expect:json
+{
+  "limit": 100,
+  "metrics": [
+    {
+      "name": "activeUsers"
+    }
+  ]
+}
 ```
 
-## without a stored token
-
-### should report that the google provider has no token
+### should include dimensions when they are given
 
 ```execute
-aux4 google analytics metadata 123456789 --tokenFile ./no-such-directory/google.json --apiUrl http://127.0.0.1:18957
+aux4 google analytics realtime 123456789 --metrics activeUsers,screenPageViews --dimensions country --limit 5 --tokenFile google-token.json --apiUrl http://127.0.0.1:18956 | aux4 json get --path '$.body'
 ```
 
-```error:partial
-no token found for provider "google"
+```expect:json
+{
+  "dimensions": [
+    {
+      "name": "country"
+    }
+  ],
+  "limit": 5,
+  "metrics": [
+    {
+      "name": "activeUsers"
+    },
+    {
+      "name": "screenPageViews"
+    }
+  ]
+}
 ```

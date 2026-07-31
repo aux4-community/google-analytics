@@ -7,13 +7,14 @@ Realtime reports support a subset of dimensions and metrics compared to standard
 #### Usage
 
 ```bash
-aux4 google analytics realtime <propertyId> [--metrics <metrics>] [--dimensions <dims>] [--limit <n>]
+aux4 google analytics realtime <propertyId> [--metrics <metrics>] [--dimensions <dims>] [--limit <n>] [--tokenFile <path>]
 ```
 
 propertyId   GA4 property ID (numeric)
 --metrics    Comma-separated metric names (default: activeUsers)
---dimensions Comma-separated dimension names (default: none)
+--dimensions Comma-separated dimension names (default: none). When empty, no `dimensions` key is sent at all
 --limit      Maximum rows to return (default: 100)
+--tokenFile  Where the shared Google OAuth token is stored (default: `~/.aux4.config/.oauth/google.json`, env `AUX4_GOOGLE_TOKEN_FILE`)
 
 #### Example
 

@@ -4,7 +4,7 @@ Commands to interact with Google Analytics 4 (GA4) using the Analytics Data API
 
 This package provides aux4 command wrappers for the [Google Analytics Data API](https://developers.google.com/analytics/devguides/reporting/data/v1) (GA4). It covers running standard reports with dimensions, metrics, and date ranges, querying realtime data, and discovering available dimensions and metrics for a property.
 
-Authentication is handled through the Google Workspace CLI (`gws`) with custom OAuth scopes — the same credential store used by other Google packages (Sheets, Drive, etc.).
+Authentication is handled by [community/google-auth](https://hub.aux4.io/package/community/google-auth), which stores a single OAuth2 token shared by every aux4 Google package.
 
 ## Installation
 
@@ -16,30 +16,24 @@ aux4 aux4 pkger install community/google-analytics
 
 This package requires:
 
-- **Google Workspace CLI** (`gws`) — for authentication and credential management
-  - [brew](https://brew.sh): `brew install googleworkspace-cli`
-  - [npm](https://www.npmjs.com): `npm install -g @googleworkspace/cli`
-- **jq** — for JSON processing
+- **jq** — for turning comma-separated dimension and metric lists into API request bodies
   - [brew](https://brew.sh): `brew install jq`
+  - linux: `apt install jq`
 
 ## Prerequisites
 
-Authenticate with Google Analytics scopes:
+Authenticate once with `community/google-auth`. The scopes are resolved from the installed Google service packages, so no `--scopes` flag is needed:
 
 ```bash
-aux4 google auth login --scopes https://www.googleapis.com/auth/analytics.readonly
+aux4 google auth login
 ```
 
-For read-write access (e.g. audience exports):
+This package requests `https://www.googleapis.com/auth/analytics.readonly`, which is enough for every command it exposes. Because that scope is already read-only, `aux4 google auth login --readonly true` requests exactly the same thing.
+
+Check the current state at any time:
 
 ```bash
-aux4 google auth login --scopes https://www.googleapis.com/auth/analytics
-```
-
-You can combine Analytics scopes with other Google services in a single login:
-
-```bash
-aux4 google auth login --services sheets,drive --scopes https://www.googleapis.com/auth/analytics.readonly
+aux4 google auth status
 ```
 
 ## Quick Start
@@ -127,13 +121,7 @@ aux4 google analytics metadata 123456789
 Filter to just dimension names:
 
 ```bash
-aux4 google analytics metadata 123456789 | jq '[.dimensions[].apiName]'
-```
-
-Filter to just metric names:
-
-```bash
-aux4 google analytics metadata 123456789 | jq '[.metrics[].apiName]'
+aux4 google analytics metadata 123456789 | aux4 json get --path '$.dimensions' | aux4 2table --table apiName,uiName
 ```
 
 ## Finding your Property ID
@@ -147,13 +135,9 @@ Your GA4 property ID is a numeric identifier found in Google Analytics:
 
 ## Environment Variables
 
-Authentication uses the same credential store as the Google Workspace CLI:
+- `AUX4_GOOGLE_TOKEN_FILE` — where the shared Google OAuth token lives. Defaults to `~/.aux4.config/.oauth/google.json`, the same location `aux4 google auth login` writes to, so it normally needs no setting.
 
-- `GOOGLE_WORKSPACE_CLI_TOKEN` — Pre-obtained OAuth2 access token (highest priority)
-- `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` — Path to credentials JSON file
-- `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` — Override default config directory
-
-For tests, set `GA4_PROPERTY_ID` to your GA4 property ID.
+For the optional `integration` test group, set `GA4_PROPERTY_ID` to your GA4 property ID.
 
 ## License
 

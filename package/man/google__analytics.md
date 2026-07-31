@@ -1,6 +1,6 @@
 #### Description
 
-The `google analytics` command group provides access to Google Analytics 4 (GA4) reporting through the Analytics Data API. It uses the same authentication credentials managed by `gws` (Google Workspace CLI), with custom OAuth scopes for Analytics access.
+The `google analytics` command group provides access to Google Analytics 4 (GA4) reporting through the Analytics Data API. Every request is signed with the shared Google OAuth2 token that `community/google-auth` maintains, so there is nothing to configure beyond a single login.
 
 Available subcommands:
 
@@ -10,11 +10,15 @@ Available subcommands:
 
 #### Prerequisites
 
-Authenticate with Analytics scopes before first use:
+Authenticate once before first use. Scopes are resolved from the installed Google service packages, so no `--scopes` flag is required:
 
 ```bash
-aux4 google auth login --scopes https://www.googleapis.com/auth/analytics.readonly
+aux4 google auth login
 ```
+
+This package requests `https://www.googleapis.com/auth/analytics.readonly`, which is enough for every command it exposes. That scope is already read-only, so `aux4 google auth login --readonly true` requests exactly the same thing.
+
+The token is read from `~/.aux4.config/.oauth/google.json`. Override it per command with `--tokenFile`, or for the whole shell with the `AUX4_GOOGLE_TOKEN_FILE` environment variable.
 
 #### Usage
 

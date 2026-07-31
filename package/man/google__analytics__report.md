@@ -9,15 +9,16 @@ Dates can be absolute (`YYYY-MM-DD`) or relative (`today`, `yesterday`, `7daysAg
 #### Usage
 
 ```bash
-aux4 google analytics report <propertyId> [--startDate <date>] [--endDate <date>] [--dimensions <dims>] [--metrics <metrics>] [--limit <n>]
+aux4 google analytics report <propertyId> [--startDate <date>] [--endDate <date>] [--dimensions <dims>] [--metrics <metrics>] [--limit <n>] [--tokenFile <path>]
 ```
 
-propertyId  GA4 property ID (numeric). Found in Google Analytics under Admin → Property Settings
+propertyId   GA4 property ID (numeric). Found in Google Analytics under Admin → Property Settings
 --startDate  Start date in YYYY-MM-DD format or relative (e.g. 7daysAgo). Required
 --endDate    End date in YYYY-MM-DD format or relative (e.g. today). Required
 --dimensions Comma-separated dimension names (default: date)
 --metrics    Comma-separated metric names (default: sessions,activeUsers)
 --limit      Maximum rows to return (default: 10000)
+--tokenFile  Where the shared Google OAuth token is stored (default: `~/.aux4.config/.oauth/google.json`, env `AUX4_GOOGLE_TOKEN_FILE`)
 
 #### Example
 
